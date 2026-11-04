@@ -110,6 +110,7 @@ The tool implements the full `generateCertificateRequestV2` protocol:
    - `DiceCertChain` (Degenerate DICE: UDS = CDI_Leaf, self-signed)
    - `ProtectedData` (COSE_Encrypt0 with ECDH-ES + AES-256-GCM)
    - `SignedData` (COSE_Sign1 over challenge + payload)
+   - Unverified device info (outer map containing the build `fingerprint`)
 3. **CSR submit** &mdash; `POST :signCertificates` returns X.509 certificate
    chains signed by Google's attestation root.
 

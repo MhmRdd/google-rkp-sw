@@ -377,15 +377,23 @@ def build_csr(
     eek_pub_bytes: bytes,
     device_info: dict,
     eek_curve: int = 2,
+    fingerprint: str | None = None,
 ) -> bytes:
-    """Build an AuthenticatedRequest per generateCertificateRequestV2.cddl."""
+    """Build an AuthenticatedRequest per generateCertificateRequestV2.cddl.
+
+    Allow appending unverified device-info map after the HAL-generated
+    AuthenticatedRequest.
+    """
     csr_payload = cbor2.dumps([3, 'keymint', device_info, keys_to_sign])
     protected_data, _, dice = build_protected_data(
         keys, keys_to_sign, eek_pub_bytes, device_info, eek_curve
     )
     signed_payload = cbor2.dumps([challenge, csr_payload])
     signed_data = cose_sign1(keys.sign, {1: keys.alg}, signed_payload)
-    return cbor2.dumps([1, {}, dice, signed_data])
+    request = [1, {}, dice, signed_data]
+    if fingerprint is not None:
+        request.append({'fingerprint': fingerprint})
+    return cbor2.dumps(request)
 
 
 # ---------------------------------------------------------------------------
@@ -708,7 +716,8 @@ def cmd_provision(args: argparse.Namespace) -> None:
 
     print(f'\n[3] Building CSR...')
     csr_bytes = build_csr(
-        keys, challenge, cose_pubs, eek_pub, device_info, eek_curve
+        keys, challenge, cose_pubs, eek_pub, device_info, eek_curve,
+        fingerprint,
     )
     print(f'  CSR: {len(csr_bytes)} bytes')
 
@@ -773,7 +782,8 @@ def cmd_keybox(args: argparse.Namespace) -> None:
 
     print('Building and submitting EC CSR...')
     csr_bytes = build_csr(
-        keys, challenge, [ec_cose_pub], eek_pub, device_info, eek_curve
+        keys, challenge, [ec_cose_pub], eek_pub, device_info, eek_curve,
+        fingerprint,
     )
     try:
         ec_chains = submit_csr(csr_bytes, challenge, url)
